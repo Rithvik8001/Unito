@@ -1,31 +1,35 @@
 import React, { createContext, useContext, useState, useEffect } from "react";
 import { useColorScheme } from "react-native";
 
-// Define theme colors
+// Define theme colors with more elegant palette
 export const lightTheme = {
   background: "#FFFFFF",
-  card: "#F5F5F5",
-  text: "#333333",
-  primary: "#4A6FFF",
-  secondary: "#FF6B6B",
-  border: "#E0E0E0",
-  success: "#4CAF50",
-  error: "#F44336",
-  warning: "#FFC107",
-  info: "#2196F3",
+  card: "#F8F9FA",
+  text: "#212529",
+  primary: "#4361EE",
+  secondary: "#F72585",
+  border: "#E9ECEF",
+  success: "#38B000",
+  error: "#E63946",
+  warning: "#FB8500",
+  info: "#4CC9F0",
+  subtle: "#F8F9FA",
+  accent: "#7209B7",
 };
 
 export const darkTheme = {
   background: "#121212",
   card: "#1E1E1E",
-  text: "#FFFFFF",
-  primary: "#6C8FFF",
-  secondary: "#FF8A8A",
-  border: "#333333",
-  success: "#66BB6A",
-  error: "#EF5350",
-  warning: "#FFCA28",
-  info: "#42A5F5",
+  text: "#F8F9FA",
+  primary: "#4CC9F0",
+  secondary: "#F72585",
+  border: "#2A2A2A",
+  success: "#57CC99",
+  error: "#E63946",
+  warning: "#FB8500",
+  info: "#4361EE",
+  subtle: "#2A2A2A",
+  accent: "#7209B7",
 };
 
 type ThemeType = typeof lightTheme;
