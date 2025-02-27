@@ -15,46 +15,12 @@ import {
 import { useTheme } from "@/app/context/ThemeContext";
 import { useLocalSearchParams, router } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
-import { getUnitsByCategory } from "@/app/constants/units";
+import {
+  getUnitsByCategory,
+  convertUnits,
+  getFormulaDescription,
+} from "@/app/constants/units";
 import { BlurView } from "expo-blur";
-
-// Placeholder for conversion logic - will be implemented in Phase 2
-const performConversion = (
-  value: number,
-  fromUnit: string,
-  toUnit: string,
-  category: string
-): number => {
-  // This is just a placeholder - actual conversion logic will be implemented later
-  if (category === "length" && fromUnit === "in" && toUnit === "cm") {
-    return value * 2.54;
-  } else if (
-    category === "currency" &&
-    fromUnit === "usd" &&
-    toUnit === "eur"
-  ) {
-    return value * 0.92; // Example exchange rate
-  }
-  return value; // Default fallback
-};
-
-// Get formula description based on units
-const getFormulaDescription = (
-  fromUnit: string,
-  toUnit: string,
-  category: string
-): string => {
-  if (category === "length" && fromUnit === "in" && toUnit === "cm") {
-    return "1 inch = 2.54 centimeters";
-  } else if (
-    category === "currency" &&
-    fromUnit === "usd" &&
-    toUnit === "eur"
-  ) {
-    return "1 USD ≈ 0.92 EUR (example rate)";
-  }
-  return "Conversion formula will be shown here";
-};
 
 export default function ConvertScreen() {
   const { theme, isDark } = useTheme();
@@ -68,6 +34,7 @@ export default function ConvertScreen() {
   const [showFromUnits, setShowFromUnits] = useState(false);
   const [showToUnits, setShowToUnits] = useState(false);
   const [animation] = useState(new Animated.Value(0));
+  const [isFavorite, setIsFavorite] = useState(false);
 
   // Get the appropriate units based on category
   const units = getUnitsByCategory(categoryId);
@@ -94,13 +61,13 @@ export default function ConvertScreen() {
     if (inputValue && fromUnit && toUnit) {
       const value = parseFloat(inputValue);
       if (!isNaN(value)) {
-        const convertedValue = performConversion(
+        const convertedValue = convertUnits(
           value,
           fromUnit,
           toUnit,
           categoryId
         );
-        setResult(convertedValue.toString());
+        setResult(convertedValue.toFixed(6));
 
         // Animate the result
         animation.setValue(0);
@@ -124,6 +91,12 @@ export default function ConvertScreen() {
   const handleSwapUnits = () => {
     setFromUnit(toUnit);
     setToUnit(fromUnit);
+  };
+
+  // Toggle favorite
+  const handleToggleFavorite = () => {
+    setIsFavorite(!isFavorite);
+    // In a future implementation, we would save this to storage
   };
 
   // Get category icon
@@ -150,6 +123,25 @@ export default function ConvertScreen() {
       default:
         return "swap-horizontal-outline";
     }
+  };
+
+  // Format result for display
+  const formatResult = (value: string): string => {
+    const num = parseFloat(value);
+    if (isNaN(num)) return "0";
+
+    // For very large or very small numbers, use scientific notation
+    if (num > 1e9 || (num < 1e-6 && num !== 0)) {
+      return num.toExponential(6);
+    }
+
+    // For currency, show 2 decimal places
+    if (categoryId === "currency") {
+      return num.toFixed(2);
+    }
+
+    // For other categories, remove trailing zeros
+    return parseFloat(num.toFixed(6)).toString();
   };
 
   // Animation styles
@@ -249,15 +241,18 @@ export default function ConvertScreen() {
             >
               <ScrollView
                 style={styles.dropdownScroll}
-                nestedScrollEnabled={true}
+                showsVerticalScrollIndicator={false}
               >
                 {units.map((unit) => (
                   <TouchableOpacity
                     key={unit.id}
                     style={[
                       styles.dropdownItem,
-                      fromUnit === unit.id && {
-                        backgroundColor: theme.primary + "20",
+                      {
+                        backgroundColor:
+                          fromUnit === unit.id
+                            ? theme.primary + "20"
+                            : "transparent",
                       },
                     ]}
                     onPress={() => {
@@ -269,8 +264,9 @@ export default function ConvertScreen() {
                       style={[
                         styles.dropdownText,
                         {
-                          color: theme.text,
-                          fontWeight: fromUnit === unit.id ? "600" : "normal",
+                          color:
+                            fromUnit === unit.id ? theme.primary : theme.text,
+                          fontWeight: fromUnit === unit.id ? "600" : "400",
                         },
                       ]}
                     >
@@ -294,7 +290,7 @@ export default function ConvertScreen() {
             style={[styles.swapButton, { backgroundColor: theme.primary }]}
             onPress={handleSwapUnits}
           >
-            <Ionicons name="swap-vertical" size={24} color="white" />
+            <Ionicons name="swap-vertical" size={20} color="white" />
           </TouchableOpacity>
 
           {/* To Unit Section */}
@@ -324,15 +320,19 @@ export default function ConvertScreen() {
               style={[
                 styles.resultContainer,
                 {
-                  borderColor: theme.border,
                   backgroundColor: theme.subtle,
+                  borderColor: theme.border,
                   opacity: animatedOpacity,
                   transform: [{ scale: animatedScale }],
                 },
               ]}
             >
-              <Text style={[styles.resultText, { color: theme.text }]}>
-                {result}
+              <Text
+                style={[styles.resultText, { color: theme.text }]}
+                numberOfLines={1}
+                adjustsFontSizeToFit
+              >
+                {formatResult(result)}
               </Text>
             </Animated.View>
           </View>
@@ -351,15 +351,18 @@ export default function ConvertScreen() {
             >
               <ScrollView
                 style={styles.dropdownScroll}
-                nestedScrollEnabled={true}
+                showsVerticalScrollIndicator={false}
               >
                 {units.map((unit) => (
                   <TouchableOpacity
                     key={unit.id}
                     style={[
                       styles.dropdownItem,
-                      toUnit === unit.id && {
-                        backgroundColor: theme.primary + "20",
+                      {
+                        backgroundColor:
+                          toUnit === unit.id
+                            ? theme.primary + "20"
+                            : "transparent",
                       },
                     ]}
                     onPress={() => {
@@ -371,8 +374,9 @@ export default function ConvertScreen() {
                       style={[
                         styles.dropdownText,
                         {
-                          color: theme.text,
-                          fontWeight: toUnit === unit.id ? "600" : "normal",
+                          color:
+                            toUnit === unit.id ? theme.primary : theme.text,
+                          fontWeight: toUnit === unit.id ? "600" : "400",
                         },
                       ]}
                     >
@@ -390,24 +394,41 @@ export default function ConvertScreen() {
               </ScrollView>
             </View>
           )}
+        </View>
 
-          {/* Formula Info */}
-          <View style={styles.formulaContainer}>
-            <Text style={[styles.formulaText, { color: theme.text + "80" }]}>
-              {getFormulaDescription(fromUnit, toUnit, categoryId)}
+        {/* Formula Card */}
+        <View style={[styles.formulaCard, { backgroundColor: theme.card }]}>
+          <View style={styles.formulaHeader}>
+            <Text style={[styles.formulaTitle, { color: theme.text }]}>
+              Formula
+            </Text>
+            <TouchableOpacity
+              style={styles.favoriteButton}
+              onPress={handleToggleFavorite}
+            >
+              <Ionicons
+                name={isFavorite ? "star" : "star-outline"}
+                size={22}
+                color={isFavorite ? theme.warning : theme.text}
+              />
+            </TouchableOpacity>
+          </View>
+          <Text style={[styles.formulaText, { color: theme.text + "CC" }]}>
+            {getFormulaDescription(fromUnit, toUnit, categoryId)}
+          </Text>
+        </View>
+
+        {/* Recent Conversions - Placeholder for future implementation */}
+        <View style={[styles.recentCard, { backgroundColor: theme.card }]}>
+          <Text style={[styles.recentTitle, { color: theme.text }]}>
+            Recent Conversions
+          </Text>
+          <View style={styles.recentList}>
+            <Text style={[styles.emptyText, { color: theme.text + "80" }]}>
+              Your recent conversions will appear here
             </Text>
           </View>
         </View>
-
-        {/* Save to Favorites Button */}
-        <TouchableOpacity
-          style={[styles.favoriteButton, { backgroundColor: theme.card }]}
-        >
-          <Ionicons name="star-outline" size={20} color={theme.warning} />
-          <Text style={[styles.favoriteButtonText, { color: theme.text }]}>
-            Save to Favorites
-          </Text>
-        </TouchableOpacity>
       </ScrollView>
     </KeyboardAvoidingView>
   );
@@ -421,17 +442,16 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: "row",
     alignItems: "center",
-    marginBottom: 24,
-    marginTop: 20,
+    marginBottom: 20,
+    paddingTop: Platform.OS === "ios" ? 40 : 20,
   },
   backButton: {
     padding: 8,
-    borderRadius: 20,
-    marginRight: 8,
   },
   titleContainer: {
     flexDirection: "row",
     alignItems: "center",
+    marginLeft: 8,
   },
   titleIcon: {
     marginRight: 8,
@@ -441,23 +461,22 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
   },
   card: {
-    borderRadius: 20,
-    padding: 24,
+    borderRadius: 16,
+    padding: 16,
+    marginBottom: 16,
     shadowColor: "#000",
-    shadowOffset: { width: 0, height: 4 },
+    shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 8,
-    elevation: 3,
-    marginBottom: 20,
+    elevation: 2,
   },
   inputContainer: {
-    marginBottom: 24,
+    marginBottom: 16,
   },
   label: {
     fontSize: 16,
-    fontWeight: "600",
-    marginBottom: 12,
-    letterSpacing: 0.2,
+    fontWeight: "500",
+    marginBottom: 8,
   },
   unitSelector: {
     flexDirection: "row",
@@ -465,8 +484,8 @@ const styles = StyleSheet.create({
     alignItems: "center",
     borderWidth: 1,
     borderRadius: 12,
-    padding: 14,
-    marginBottom: 16,
+    padding: 12,
+    marginBottom: 12,
   },
   unitText: {
     fontSize: 16,
@@ -475,14 +494,15 @@ const styles = StyleSheet.create({
   input: {
     borderWidth: 1,
     borderRadius: 12,
-    padding: 14,
+    padding: 12,
     fontSize: 18,
     fontWeight: "500",
   },
   resultContainer: {
     borderWidth: 1,
     borderRadius: 12,
-    padding: 14,
+    padding: 12,
+    justifyContent: "center",
   },
   resultText: {
     fontSize: 18,
@@ -490,68 +510,99 @@ const styles = StyleSheet.create({
     textAlign: "right",
   },
   swapButton: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
+    position: "absolute",
+    right: 16,
+    top: "50%",
+    marginTop: -20,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
     justifyContent: "center",
     alignItems: "center",
-    alignSelf: "center",
-    marginVertical: 16,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.2,
     shadowRadius: 4,
     elevation: 4,
+    zIndex: 10,
   },
   dropdown: {
-    borderWidth: 1,
+    position: "absolute",
+    left: 16,
+    right: 16,
+    top: 80,
     borderRadius: 12,
-    marginTop: -8,
-    marginBottom: 24,
-    maxHeight: 240,
+    borderWidth: 1,
+    maxHeight: 250,
+    zIndex: 100,
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 3,
+    shadowOpacity: 0.15,
+    shadowRadius: 12,
+    elevation: 8,
   },
   dropdownScroll: {
     padding: 8,
   },
   dropdownItem: {
-    padding: 14,
-    borderRadius: 8,
-    marginVertical: 2,
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
+    padding: 12,
+    borderRadius: 8,
+    marginVertical: 2,
   },
   dropdownText: {
     fontSize: 16,
   },
-  formulaContainer: {
-    marginTop: 16,
-    alignItems: "center",
-  },
-  formulaText: {
-    fontSize: 14,
-    fontStyle: "italic",
-  },
-  favoriteButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    padding: 16,
+  formulaCard: {
     borderRadius: 16,
-    marginBottom: 30,
+    padding: 16,
+    marginBottom: 16,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
-    shadowRadius: 4,
+    shadowRadius: 8,
     elevation: 2,
   },
-  favoriteButtonText: {
-    fontSize: 16,
+  formulaHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 8,
+  },
+  formulaTitle: {
+    fontSize: 18,
     fontWeight: "600",
-    marginLeft: 8,
+  },
+  favoriteButton: {
+    padding: 4,
+  },
+  formulaText: {
+    fontSize: 16,
+    lineHeight: 24,
+  },
+  recentCard: {
+    borderRadius: 16,
+    padding: 16,
+    marginBottom: 32,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 2,
+  },
+  recentTitle: {
+    fontSize: 18,
+    fontWeight: "600",
+    marginBottom: 12,
+  },
+  recentList: {
+    minHeight: 100,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  emptyText: {
+    fontSize: 16,
+    textAlign: "center",
   },
 });
