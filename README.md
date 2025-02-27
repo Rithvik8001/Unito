@@ -1,50 +1,73 @@
-# Welcome to your Expo app 👋
+# Unito - Unit Converter App
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+Unito is a clean, modern unit converter app built with React Native and Expo. It allows users to convert measurements across different categories like length, weight, temperature, time, and more.
 
-## Get started
+## Features
 
-1. Install dependencies
+- **Multiple Unit Categories** – Convert length, weight, temperature, speed, time, area, volume, etc.
+- **Instant Conversion** – Enter a value and see the converted result in real-time.
+- **Offline Support** – No internet needed; all conversions are handled locally.
+- **History & Favorites** – Save frequently used conversions for quick access.
+- **Dark Mode Support** – User-friendly UI with light and dark themes.
 
-   ```bash
+## Screens
+
+1. **Home Screen** – List of conversion categories (Length, Weight, Temperature, etc.).
+2. **Conversion Screen** – Input fields for unit selection, value entry, and real-time results.
+3. **History/Favorites Screen** – View past conversions and save frequent ones.
+4. **Settings Screen** – Toggle dark mode, change username, etc.
+
+## Development Phases
+
+- **Phase 1: Setup & UI Design** – Implement screens and navigation.
+- **Phase 2: Conversion Logic** – Write unit conversion functions.
+- **Phase 3: State Management** – Store history & favorites using AsyncStorage.
+- **Phase 4: Dark Mode & Theming** – Add a theme switcher.
+
+## Getting Started
+
+### Prerequisites
+
+- Node.js
+- npm or yarn
+- Expo CLI
+
+### Installation
+
+1. Clone the repository
+
+   ```
+   git clone https://github.com/yourusername/unito.git
+   ```
+
+2. Install dependencies
+
+   ```
+   cd unito
    npm install
    ```
 
-2. Start the app
+3. Start the development server
 
-   ```bash
-    npx expo start
+   ```
+   npm start
    ```
 
-In the output, you'll find options to open the app in a
+4. Open the app on your device using the Expo Go app or run it on a simulator.
 
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
+## Tech Stack
 
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
+- React Native
+- Expo
+- TypeScript
+- AsyncStorage (for local storage)
+- React Navigation (for navigation)
 
-## Get a fresh project
+## License
 
-When you're ready, run:
+This project is licensed under the MIT License - see the LICENSE file for details.
 
-```bash
-npm run reset-project
-```
+## Acknowledgments
 
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
-
-## Learn more
-
-To learn more about developing your project with Expo, look at the following resources:
-
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
-
-## Join the community
-
-Join our community of developers creating universal apps.
-
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+- Icons from Ionicons
+- Design inspiration from various unit converter apps
