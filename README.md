@@ -17,21 +17,6 @@ Unito is a clean, modern unit converter app built with React Native and Expo. It
 3. **History/Favorites Screen** – View past conversions and save frequent ones.
 4. **Settings Screen** – Toggle dark mode, change username, etc.
 
-## Development Phases
-
-- **Phase 1: Setup & UI Design** – Implement screens and navigation.
-- **Phase 2: Conversion Logic** – Write unit conversion functions.
-- **Phase 3: State Management** – Store history & favorites using AsyncStorage.
-- **Phase 4: Dark Mode & Theming** – Add a theme switcher.
-
-## Getting Started
-
-### Prerequisites
-
-- Node.js
-- npm or yarn
-- Expo CLI
-
 ### Installation
 
 1. Clone the repository
@@ -66,8 +51,3 @@ Unito is a clean, modern unit converter app built with React Native and Expo. It
 ## License
 
 This project is licensed under the MIT License - see the LICENSE file for details.
-
-## Acknowledgments
-
-- Icons from Ionicons
-- Design inspiration from various unit converter apps
