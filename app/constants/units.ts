@@ -45,7 +45,7 @@ export const temperatureUnits: BaseUnit[] = [
   { id: "k", name: "Kelvin (K)" },
 ];
 
-// Currency units - conversion rates would typically come from an API
+// Currency units - rates will come from the API
 export const currencyUnits: CurrencyUnit[] = [
   { id: "usd", name: "US Dollar ($)", rate: 1 },
   { id: "eur", name: "Euro (€)", rate: 0.93 },
@@ -234,9 +234,19 @@ export const convertUnits = (
     return convertTemperature(value, fromUnit, toUnit);
   }
 
-  // Special case for currency
+  // For currency, we now use the API service instead of this function
+  // This is kept for fallback purposes only
   if (category === "currency") {
-    return convertCurrency(value, fromUnit, toUnit);
+    // Note: This is a fallback and will be replaced by API data
+    const units = currencyUnits;
+    const fromCurrency = units.find((unit) => unit.id === fromUnit);
+    const toCurrency = units.find((unit) => unit.id === toUnit);
+
+    if (!fromCurrency || !toCurrency) return 0;
+
+    // Convert to USD first, then to target currency
+    const valueInUSD = value / fromCurrency.rate;
+    return valueInUSD * toCurrency.rate;
   }
 
   // For other categories, use the conversion factors
@@ -284,23 +294,6 @@ export const convertTemperature = (
     default:
       return 0;
   }
-};
-
-// Currency conversion function
-export const convertCurrency = (
-  value: number,
-  fromUnit: string,
-  toUnit: string
-): number => {
-  const units = currencyUnits;
-  const fromCurrency = units.find((unit) => unit.id === fromUnit);
-  const toCurrency = units.find((unit) => unit.id === toUnit);
-
-  if (!fromCurrency || !toCurrency) return 0;
-
-  // Convert to USD first, then to target currency
-  const valueInUSD = value / fromCurrency.rate;
-  return valueInUSD * toCurrency.rate;
 };
 
 // Get formula description for conversion

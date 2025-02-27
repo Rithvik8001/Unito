@@ -11,6 +11,8 @@ import {
   StatusBar,
   Animated,
   Easing,
+  ActivityIndicator,
+  Alert,
 } from "react-native";
 import { useTheme } from "@/app/context/ThemeContext";
 import { useLocalSearchParams, router } from "expo-router";
@@ -21,6 +23,10 @@ import {
   getFormulaDescription,
 } from "@/app/constants/units";
 import { BlurView } from "expo-blur";
+import {
+  fetchLatestRates,
+  CurrencyRates,
+} from "@/app/services/currencyService";
 
 export default function ConvertScreen() {
   const { theme, isDark } = useTheme();
@@ -35,6 +41,11 @@ export default function ConvertScreen() {
   const [showToUnits, setShowToUnits] = useState(false);
   const [animation] = useState(new Animated.Value(0));
   const [isFavorite, setIsFavorite] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [currencyRates, setCurrencyRates] = useState<CurrencyRates | null>(
+    null
+  );
+  const [lastUpdated, setLastUpdated] = useState<string>("");
 
   // Get the appropriate units based on category
   const units = getUnitsByCategory(categoryId);
@@ -47,6 +58,8 @@ export default function ConvertScreen() {
     } else if (categoryId === "currency") {
       setFromUnit("usd");
       setToUnit("eur");
+      // Fetch currency rates when currency is selected
+      fetchCurrencyRates();
     } else if (categoryId === "temperature") {
       setFromUnit("c");
       setToUnit("f");
@@ -56,17 +69,52 @@ export default function ConvertScreen() {
     }
   }, [categoryId, units]);
 
+  // Fetch currency rates from API
+  const fetchCurrencyRates = async () => {
+    if (categoryId !== "currency") return;
+
+    setIsLoading(true);
+    try {
+      const rates = await fetchLatestRates();
+      setCurrencyRates(rates);
+      setLastUpdated(formatLastUpdated(rates.lastUpdated));
+    } catch (error) {
+      console.error("Error fetching currency rates:", error);
+      Alert.alert(
+        "Error",
+        "Could not fetch latest currency rates. Using fallback rates instead."
+      );
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Format the last updated timestamp
+  const formatLastUpdated = (timestamp: string): string => {
+    try {
+      const date = new Date(timestamp);
+      return `Last updated: ${date.toLocaleDateString()} ${date.toLocaleTimeString()}`;
+    } catch (e) {
+      return "Last updated: Unknown";
+    }
+  };
+
   // Update result when inputs change
   useEffect(() => {
     if (inputValue && fromUnit && toUnit) {
       const value = parseFloat(inputValue);
       if (!isNaN(value)) {
-        const convertedValue = convertUnits(
-          value,
-          fromUnit,
-          toUnit,
-          categoryId
-        );
+        let convertedValue: number;
+
+        // Use API rates for currency if available
+        if (categoryId === "currency" && currencyRates) {
+          const fromRate = currencyRates.rates[fromUnit] || 1;
+          const toRate = currencyRates.rates[toUnit] || 1;
+          convertedValue = (value * toRate) / fromRate;
+        } else {
+          convertedValue = convertUnits(value, fromUnit, toUnit, categoryId);
+        }
+
         setResult(convertedValue.toFixed(6));
 
         // Animate the result
@@ -79,7 +127,7 @@ export default function ConvertScreen() {
         }).start();
       }
     }
-  }, [inputValue, fromUnit, toUnit, categoryId]);
+  }, [inputValue, fromUnit, toUnit, categoryId, currencyRates]);
 
   // Get unit name from id
   const getUnitName = (unitId: string) => {
@@ -97,6 +145,11 @@ export default function ConvertScreen() {
   const handleToggleFavorite = () => {
     setIsFavorite(!isFavorite);
     // In a future implementation, we would save this to storage
+  };
+
+  // Refresh currency rates
+  const handleRefreshRates = () => {
+    fetchCurrencyRates();
   };
 
   // Get category icon
@@ -327,13 +380,17 @@ export default function ConvertScreen() {
                 },
               ]}
             >
-              <Text
-                style={[styles.resultText, { color: theme.text }]}
-                numberOfLines={1}
-                adjustsFontSizeToFit
-              >
-                {formatResult(result)}
-              </Text>
+              {isLoading && categoryId === "currency" ? (
+                <ActivityIndicator color={theme.primary} size="small" />
+              ) : (
+                <Text
+                  style={[styles.resultText, { color: theme.text }]}
+                  numberOfLines={1}
+                  adjustsFontSizeToFit
+                >
+                  {formatResult(result)}
+                </Text>
+              )}
             </Animated.View>
           </View>
 
@@ -402,20 +459,40 @@ export default function ConvertScreen() {
             <Text style={[styles.formulaTitle, { color: theme.text }]}>
               Formula
             </Text>
-            <TouchableOpacity
-              style={styles.favoriteButton}
-              onPress={handleToggleFavorite}
-            >
-              <Ionicons
-                name={isFavorite ? "star" : "star-outline"}
-                size={22}
-                color={isFavorite ? theme.warning : theme.text}
-              />
-            </TouchableOpacity>
+            <View style={styles.formulaActions}>
+              {categoryId === "currency" && (
+                <TouchableOpacity
+                  style={[styles.refreshButton, { marginRight: 10 }]}
+                  onPress={handleRefreshRates}
+                >
+                  <Ionicons name="refresh" size={22} color={theme.primary} />
+                </TouchableOpacity>
+              )}
+              <TouchableOpacity
+                style={styles.favoriteButton}
+                onPress={handleToggleFavorite}
+              >
+                <Ionicons
+                  name={isFavorite ? "star" : "star-outline"}
+                  size={22}
+                  color={isFavorite ? theme.warning : theme.text}
+                />
+              </TouchableOpacity>
+            </View>
           </View>
           <Text style={[styles.formulaText, { color: theme.text + "CC" }]}>
-            {getFormulaDescription(fromUnit, toUnit, categoryId)}
+            {categoryId === "currency" && currencyRates
+              ? `1 ${getUnitName(fromUnit).split(" ")[0]} = ${(
+                  currencyRates.rates[toUnit] / currencyRates.rates[fromUnit]
+                ).toFixed(4)} ${getUnitName(toUnit).split(" ")[0]}`
+              : getFormulaDescription(fromUnit, toUnit, categoryId)}
           </Text>
+
+          {categoryId === "currency" && lastUpdated && (
+            <Text style={[styles.lastUpdated, { color: theme.text + "80" }]}>
+              {lastUpdated}
+            </Text>
+          )}
         </View>
 
         {/* Recent Conversions - Placeholder for future implementation */}
@@ -503,6 +580,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     padding: 12,
     justifyContent: "center",
+    minHeight: 50,
   },
   resultText: {
     fontSize: 18,
@@ -574,12 +652,23 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: "600",
   },
+  formulaActions: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
   favoriteButton: {
+    padding: 4,
+  },
+  refreshButton: {
     padding: 4,
   },
   formulaText: {
     fontSize: 16,
     lineHeight: 24,
+  },
+  lastUpdated: {
+    fontSize: 12,
+    marginTop: 8,
   },
   recentCard: {
     borderRadius: 16,
