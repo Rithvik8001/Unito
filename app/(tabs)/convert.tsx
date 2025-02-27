@@ -26,6 +26,7 @@ import { BlurView } from "expo-blur";
 import {
   fetchLatestRates,
   CurrencyRates,
+  getFormattedTimeUntilRefresh,
 } from "@/app/services/currencyService";
 
 export default function ConvertScreen() {
@@ -46,6 +47,7 @@ export default function ConvertScreen() {
     null
   );
   const [lastUpdated, setLastUpdated] = useState<string>("");
+  const [refreshStatus, setRefreshStatus] = useState<string>("");
 
   // Get the appropriate units based on category
   const units = getUnitsByCategory(categoryId);
@@ -60,6 +62,7 @@ export default function ConvertScreen() {
       setToUnit("eur");
       // Fetch currency rates when currency is selected
       fetchCurrencyRates();
+      updateRefreshStatus();
     } else if (categoryId === "temperature") {
       setFromUnit("c");
       setToUnit("f");
@@ -69,15 +72,33 @@ export default function ConvertScreen() {
     }
   }, [categoryId, units]);
 
+  // Update refresh status periodically
+  useEffect(() => {
+    if (categoryId === "currency") {
+      updateRefreshStatus();
+      const interval = setInterval(updateRefreshStatus, 60000); // Update every minute
+      return () => clearInterval(interval);
+    }
+  }, [categoryId]);
+
+  // Update the refresh status text
+  const updateRefreshStatus = async () => {
+    if (categoryId === "currency") {
+      const status = await getFormattedTimeUntilRefresh();
+      setRefreshStatus(status);
+    }
+  };
+
   // Fetch currency rates from API
-  const fetchCurrencyRates = async () => {
+  const fetchCurrencyRates = async (forceRefresh = false) => {
     if (categoryId !== "currency") return;
 
     setIsLoading(true);
     try {
-      const rates = await fetchLatestRates();
+      const rates = await fetchLatestRates("USD", forceRefresh);
       setCurrencyRates(rates);
       setLastUpdated(formatLastUpdated(rates.lastUpdated));
+      updateRefreshStatus();
     } catch (error) {
       console.error("Error fetching currency rates:", error);
       Alert.alert(
@@ -149,7 +170,18 @@ export default function ConvertScreen() {
 
   // Refresh currency rates
   const handleRefreshRates = () => {
-    fetchCurrencyRates();
+    if (refreshStatus === "Refresh available now") {
+      fetchCurrencyRates(true); // Force refresh
+    } else {
+      Alert.alert(
+        "Refresh Not Available",
+        `Currency rates are updated weekly to minimize API calls. ${refreshStatus}.`,
+        [
+          { text: "OK" },
+          { text: "Refresh Anyway", onPress: () => fetchCurrencyRates(true) },
+        ]
+      );
+    }
   };
 
   // Get category icon
@@ -465,7 +497,19 @@ export default function ConvertScreen() {
                   style={[styles.refreshButton, { marginRight: 10 }]}
                   onPress={handleRefreshRates}
                 >
-                  <Ionicons name="refresh" size={22} color={theme.primary} />
+                  <Ionicons
+                    name={
+                      refreshStatus === "Refresh available now"
+                        ? "refresh"
+                        : "time-outline"
+                    }
+                    size={22}
+                    color={
+                      refreshStatus === "Refresh available now"
+                        ? theme.primary
+                        : theme.text + "80"
+                    }
+                  />
                 </TouchableOpacity>
               )}
               <TouchableOpacity
@@ -488,10 +532,26 @@ export default function ConvertScreen() {
               : getFormulaDescription(fromUnit, toUnit, categoryId)}
           </Text>
 
-          {categoryId === "currency" && lastUpdated && (
-            <Text style={[styles.lastUpdated, { color: theme.text + "80" }]}>
-              {lastUpdated}
-            </Text>
+          {categoryId === "currency" && (
+            <View style={styles.currencyInfo}>
+              {lastUpdated && (
+                <Text
+                  style={[styles.lastUpdated, { color: theme.text + "80" }]}
+                >
+                  {lastUpdated}
+                </Text>
+              )}
+              {refreshStatus && (
+                <Text
+                  style={[styles.refreshStatus, { color: theme.text + "80" }]}
+                >
+                  {refreshStatus}
+                </Text>
+              )}
+              <Text style={[styles.apiNote, { color: theme.text + "60" }]}>
+                Rates are updated weekly to minimize API calls
+              </Text>
+            </View>
           )}
         </View>
 
@@ -666,9 +726,20 @@ const styles = StyleSheet.create({
     fontSize: 16,
     lineHeight: 24,
   },
+  currencyInfo: {
+    marginTop: 12,
+  },
   lastUpdated: {
     fontSize: 12,
-    marginTop: 8,
+    marginBottom: 4,
+  },
+  refreshStatus: {
+    fontSize: 12,
+    marginBottom: 4,
+  },
+  apiNote: {
+    fontSize: 11,
+    fontStyle: "italic",
   },
   recentCard: {
     borderRadius: 16,
